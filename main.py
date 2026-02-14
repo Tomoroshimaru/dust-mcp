@@ -22,8 +22,6 @@ Config.validate()
 # Initialize MCP server
 mcp = FastMCP("Dust MCP")
 
-
-# === Register all tools ===
 # === Register all tools ===
 from tools.helper import register as register_help
 from tools.agents import register as register_agents
@@ -50,7 +48,7 @@ register_files(mcp)
 logger.info("✅ All tools registered")
 
 
-# === NoHostCheckWrapper (bypass TrustedHostMiddleware de FastMCP derrière proxy) ===
+# === NoHostCheckWrapper (bypass TrustedHostMiddleware derrière proxy) ===
 class NoHostCheckWrapper:
     def __init__(self, app: ASGIApp):
         self.app = app
@@ -67,38 +65,14 @@ class NoHostCheckWrapper:
         await self.app(scope, receive, send)
 
 
-from starlette.applications import Starlette
-from starlette.responses import JSONResponse
-from starlette.routing import Route, Mount
-
-# Health check + OAuth metadata (pour Dust)
-async def health(request):
-    return JSONResponse({"status": "ok"})
-
-async def oauth_metadata(request):
-    """Dust cherche les métadonnées OAuth — on retourne 404 pour signaler: pas d'OAuth."""
-    return JSONResponse(
-        {"error": "OAuth not supported. This MCP uses API key authentication."},
-        status_code=404,
-    )
-
-# Wrapper app qui combine routes custom + MCP
-routes = [
-    Route("/health", health),
-    Route("/.well-known/oauth-authorization-server", oauth_metadata),
-    Route("/.well-known/oauth-protected-resource", oauth_metadata),
-    Mount("/", app=mcp.http_app()),
-]
-
-combined_app = Starlette(routes=routes)
-
 # === Main ===
 if __name__ == "__main__":
     import uvicorn
 
     PORT = int(os.getenv("PORT", "8000"))
 
-    final_app = NoHostCheckWrapper(combined_app)
+    app = mcp.http_app()
+    final_app = NoHostCheckWrapper(app)
 
     logger.info("=" * 60)
     logger.info("🚀 Dust MCP Server")
