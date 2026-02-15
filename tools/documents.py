@@ -24,7 +24,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/documents",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/documents",
             params={"limit": limit, "offset": offset},
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
@@ -45,7 +45,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/documents/{document_id}"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/documents/{document_id}"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -59,6 +59,7 @@ def register(mcp):
         mime_type: str = "text/plain",
         source_url: Optional[str] = None,
         tags: Optional[str] = None,
+        timestamp: Optional[int] = None,
         light_document_output: bool = True,
     ) -> str:
         """
@@ -74,10 +75,12 @@ def register(mcp):
             mime_type: Type MIME (default: text/plain). Autres: text/markdown, text/html
             source_url: URL source optionnelle
             tags: Tags séparés par des virgules (optionnel). Ex: "tag1,tag2"
+            timestamp: Timestamp Unix ms du document (optionnel)
             light_document_output: Si True, retourne une version légère (default True)
         """
         client = DustClient()
 
+        # Body en snake_case (confirmé par le code source Dust)
         body = {
             "title": title,
             "text": text,
@@ -88,9 +91,11 @@ def register(mcp):
             body["source_url"] = source_url
         if tags:
             body["tags"] = [t.strip() for t in tags.split(",")]
+        if timestamp:
+            body["timestamp"] = timestamp
 
         result = await client.post(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/documents/{document_id}",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/documents/{document_id}",
             data=body,
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
@@ -112,7 +117,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.delete(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/documents/{document_id}"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/documents/{document_id}"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -127,6 +132,8 @@ def register(mcp):
         Modifier la hiérarchie parent d'un document.
         Permet de réorganiser les documents dans l'arborescence.
 
+        ⚠️ Cette opération peut être rejetée si la clé API n'a pas les permissions système.
+
         Args:
             space_id: ID du space
             data_source_id: ID de la data source
@@ -140,7 +147,7 @@ def register(mcp):
             return json.dumps({"error": True, "message": f"JSON invalide: {str(e)}"})
 
         result = await client.post(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/documents/{document_id}/parents",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/documents/{document_id}/parents",
             data={"parents": parents},
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

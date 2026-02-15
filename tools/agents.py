@@ -16,7 +16,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            "/assistant/agent-configurations/search",
+            "/assistant/agent_configurations/search",
             params={"q": query},
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
@@ -31,7 +31,7 @@ def register(mcp):
             agent_sid: L'identifiant sId de l'agent (trouvable via dust_agents_search)
         """
         client = DustClient()
-        result = await client.get(f"/assistant/agent-configurations/{agent_sid}")
+        result = await client.get(f"/assistant/agent_configurations/{agent_sid}")
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     @mcp.tool()
@@ -44,7 +44,7 @@ def register(mcp):
             agent_sid: L'identifiant sId de l'agent
             updates_json: JSON string des champs à modifier.
                 Exemple: '{"name": "Nouveau nom", "model": {"providerId": "anthropic", "modelId": "claude-sonnet-4-20250514", "temperature": 0.7}}'
-                Champs modifiables: name, description, instructions, model, maxStepsPerRun, pictureUrl
+                Champs modifiables: name, description, instructions, model, maxStepsPerRun, pictureUrl, userFavorite
         """
         client = DustClient()
         try:
@@ -53,7 +53,7 @@ def register(mcp):
             return json.dumps({"error": True, "message": f"JSON invalide: {str(e)}"})
 
         result = await client.patch(
-            f"/assistant/agent-configurations/{agent_sid}",
+            f"/assistant/agent_configurations/{agent_sid}",
             data=updates,
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

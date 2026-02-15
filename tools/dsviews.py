@@ -16,7 +16,7 @@ def register(mcp):
             space_id: ID du space
         """
         client = DustClient()
-        result = await client.get(f"/spaces/{space_id}/data-source-views")
+        result = await client.get(f"/spaces/{space_id}/data_source_views")
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     @mcp.tool()
@@ -54,7 +54,7 @@ def register(mcp):
             params["timestamp_lt"] = timestamp_lt
 
         result = await client.get(
-            f"/spaces/{space_id}/data-source-views/{dsv_id}/search",
+            f"/spaces/{space_id}/data_source_views/{dsv_id}/search",
             params=params,
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

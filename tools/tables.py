@@ -17,7 +17,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -35,7 +35,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables/{table_id}"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables/{table_id}"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -60,7 +60,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.post(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables",
             data={
                 "table_id": table_id,
                 "name": name,
@@ -84,7 +84,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.delete(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables/{table_id}"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables/{table_id}"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -108,7 +108,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables/{table_id}/rows",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables/{table_id}/rows",
             params={"limit": limit, "offset": offset},
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
@@ -130,7 +130,7 @@ def register(mcp):
             data_source_id: ID de la data source
             table_id: ID de la table
             rows_json: JSON array des rows. Chaque row doit avoir "row_id" et "value" (dict des colonnes).
-                Exemple: '[{"row_id": "row1", "value": {"name": "Alice", "age": 30}}, {"row_id": "row2", "value": {"name": "Bob", "age": 25}}]'
+                Exemple: '[{"row_id": "row1", "value": {"name": "Alice", "age": 30}}]'
             truncate: Si True, supprime toutes les rows existantes avant l'upsert (default False)
         """
         client = DustClient()
@@ -139,8 +139,16 @@ def register(mcp):
         except json.JSONDecodeError as e:
             return json.dumps({"error": True, "message": f"JSON invalide: {str(e)}"})
 
+        # Validation des rows
+        for i, row in enumerate(rows):
+            if "row_id" not in row or "value" not in row:
+                return json.dumps({
+                    "error": True,
+                    "message": f"Row {i}: chaque row doit contenir 'row_id' et 'value'."
+                })
+
         result = await client.post(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables/{table_id}/rows",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables/{table_id}/rows",
             data={"rows": rows, "truncate": truncate},
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
@@ -160,7 +168,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables/{table_id}/rows/{row_id}"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables/{table_id}/rows/{row_id}"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -180,6 +188,6 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.delete(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/tables/{table_id}/rows/{row_id}"
+            f"/spaces/{space_id}/data_sources/{data_source_id}/tables/{table_id}/rows/{row_id}"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

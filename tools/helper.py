@@ -11,7 +11,7 @@ def register(mcp):
 
         Args:
             category: Catégorie à afficher. Valeurs: "all", "agents", "conversations",
-                      "search", "datasources", "documents", "dsviews", "tables", "apps", "files"
+                      "search", "spaces", "datasources", "documents", "dsviews", "tables", "apps", "files"
         """
         catalog = {
             "agents": {
@@ -19,11 +19,12 @@ def register(mcp):
                 "tools": {
                     "dust_agents_search": "Chercher un agent par nom",
                     "dust_agents_get": "Récupérer la config complète d'un agent (modèle, instructions, actions)",
-                    "dust_agents_update": "Modifier la configuration d'un agent",
+                    "dust_agents_update": "Modifier la configuration d'un agent (⚠️ vérifier les champs acceptés par l'API)",
                 },
             },
             "conversations": {
                 "description": "Créer et gérer des conversations avec les agents Dust",
+                "notes": "Le context (username, timezone) est automatiquement injecté. Origin est toujours 'api'.",
                 "tools": {
                     "dust_conv_create": "Créer une conversation + premier message (peut mentionner un agent)",
                     "dust_conv_get": "Récupérer une conversation complète avec tous ses messages",
@@ -37,7 +38,14 @@ def register(mcp):
             "search": {
                 "description": "Recherche sémantique dans le workspace",
                 "tools": {
-                    "dust_search_nodes": "Rechercher des documents/nodes dans tout le workspace",
+                    "dust_search_nodes": "Rechercher des documents/nodes (query min 3 chars, viewType: all/document/table)",
+                },
+            },
+            "spaces": {
+                "description": "Découvrir les spaces du workspace",
+                "notes": "Utiliser dust_list_spaces EN PREMIER pour obtenir les space_ids nécessaires aux autres outils.",
+                "tools": {
+                    "dust_list_spaces": "Lister tous les spaces disponibles et leurs IDs",
                 },
             },
             "datasources": {
@@ -49,6 +57,7 @@ def register(mcp):
             },
             "documents": {
                 "description": "CRUD sur les documents dans les data sources",
+                "notes": "Body en snake_case (mime_type, source_url, light_document_output). parents peut être rejeté si API key non-système.",
                 "tools": {
                     "dust_docs_list": "Lister les documents d'une data source",
                     "dust_docs_get": "Récupérer un document spécifique",
@@ -72,7 +81,7 @@ def register(mcp):
                     "dust_tables_upsert": "Créer ou modifier une table",
                     "dust_tables_delete": "Supprimer une table",
                     "dust_tables_list_rows": "Lister les rows d'une table",
-                    "dust_tables_upsert_rows": "Insérer ou mettre à jour des rows",
+                    "dust_tables_upsert_rows": "Insérer ou mettre à jour des rows (validation row_id + value)",
                     "dust_tables_get_row": "Récupérer une row spécifique",
                     "dust_tables_delete_row": "Supprimer une row",
                 },

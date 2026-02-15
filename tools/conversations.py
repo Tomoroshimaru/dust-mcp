@@ -2,6 +2,23 @@
 import json
 from typing import Optional
 from client import DustClient
+from config import Config
+
+
+def _build_message_context(
+    username: Optional[str] = None,
+    timezone: Optional[str] = None,
+    full_name: Optional[str] = None,
+    email: Optional[str] = None,
+) -> dict:
+    """Construit le context requis par l'API Dust."""
+    return {
+        "username": username or Config.DEFAULT_USERNAME,
+        "timezone": timezone or Config.DEFAULT_TIMEZONE,
+        "origin": "api",
+        **({"fullName": full_name} if full_name else {}),
+        **({"email": email} if email else {}),
+    }
 
 
 def register(mcp):
@@ -12,6 +29,8 @@ def register(mcp):
         agent_sid: Optional[str] = None,
         title: Optional[str] = None,
         blocking: bool = True,
+        username: Optional[str] = None,
+        timezone: Optional[str] = None,
     ) -> str:
         """
         Créer une nouvelle conversation et envoyer le premier message.
@@ -26,13 +45,16 @@ def register(mcp):
             title: Titre de la conversation (optionnel)
             blocking: Si True, attend la réponse de l'agent. Si False, retourne immédiatement
                       l'ID de conversation (utiliser dust_conv_get_events pour récupérer la réponse).
+            username: Username de l'expéditeur (optionnel, default: config)
+            timezone: Timezone de l'expéditeur (optionnel, default: config)
         """
         client = DustClient()
 
-        # Construire le message
-        message = {"content": message_content, "context": {"origin": "mcp"}}
-        if agent_sid:
-            message["mentions"] = [{"configurationId": agent_sid}]
+        message = {
+            "content": message_content,
+            "mentions": [{"configurationId": agent_sid}] if agent_sid else [],
+            "context": _build_message_context(username=username, timezone=timezone),
+        }
 
         body = {"message": message, "blocking": blocking}
         if title:
@@ -64,6 +86,8 @@ def register(mcp):
         message_content: str,
         agent_sid: Optional[str] = None,
         blocking: bool = True,
+        username: Optional[str] = None,
+        timezone: Optional[str] = None,
     ) -> str:
         """
         Envoyer un message dans une conversation existante.
@@ -75,12 +99,16 @@ def register(mcp):
             message_content: Contenu du message à envoyer
             agent_sid: sId de l'agent à mentionner (optionnel)
             blocking: Si True, attend la réponse de l'agent
+            username: Username de l'expéditeur (optionnel, default: config)
+            timezone: Timezone de l'expéditeur (optionnel, default: config)
         """
         client = DustClient()
 
-        message = {"content": message_content, "context": {"origin": "mcp"}}
-        if agent_sid:
-            message["mentions"] = [{"configurationId": agent_sid}]
+        message = {
+            "content": message_content,
+            "mentions": [{"configurationId": agent_sid}] if agent_sid else [],
+            "context": _build_message_context(username=username, timezone=timezone),
+        }
 
         body = {"message": message, "blocking": blocking}
 
@@ -150,6 +178,8 @@ def register(mcp):
         content: str,
         content_type: str = "text/plain",
         url: Optional[str] = None,
+        username: Optional[str] = None,
+        timezone: Optional[str] = None,
     ) -> str:
         """
         Injecter un content fragment dans une conversation.
@@ -161,18 +191,21 @@ def register(mcp):
             content: Le contenu textuel à injecter
             content_type: Type MIME (default: text/plain). Autres: text/markdown, application/json
             url: URL source optionnelle
+            username: Username de l'expéditeur (optionnel, default: config)
+            timezone: Timezone de l'expéditeur (optionnel, default: config)
         """
         client = DustClient()
         body = {
             "title": title,
             "content": content,
             "contentType": content_type,
+            "context": _build_message_context(username=username, timezone=timezone),
         }
         if url:
             body["url"] = url
 
         result = await client.post(
-            f"/assistant/conversations/{conversation_id}/content-fragments",
+            f"/assistant/conversations/{conversation_id}/content_fragments",
             data=body,
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

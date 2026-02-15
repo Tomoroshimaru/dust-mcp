@@ -9,14 +9,18 @@ class Config:
     # Dust API
     DUST_API_KEY = os.getenv("DUST_API_KEY", "")
     WORKSPACE_ID = os.getenv("DUST_WORKSPACE_ID", "")
-    
+
+    # Defaults pour le context des conversations (requis par l'API Dust)
+    DEFAULT_USERNAME = os.getenv("MCP_DEFAULT_USERNAME", "dust-mcp-api")
+    DEFAULT_TIMEZONE = os.getenv("MCP_DEFAULT_TIMEZONE", "Europe/Paris")
+
     # Base URL — ne pas modifier
     API_BASE_URL = "https://dust.tt/api/v1"
-    
+
     @classmethod
     def workspace_url(cls) -> str:
         return f"{cls.API_BASE_URL}/w/{cls.WORKSPACE_ID}"
-    
+
     @classmethod
     def validate(cls) -> bool:
         if not cls.DUST_API_KEY:

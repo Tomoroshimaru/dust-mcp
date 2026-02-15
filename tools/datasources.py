@@ -12,10 +12,10 @@ def register(mcp):
         Retourne: nom, description, provider, connecteur pour chaque data source.
 
         Args:
-            space_id: ID du space
+            space_id: ID du space (trouvable via dust_list_spaces)
         """
         client = DustClient()
-        result = await client.get(f"/spaces/{space_id}/data-sources")
+        result = await client.get(f"/spaces/{space_id}/data_sources")
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     @mcp.tool()
@@ -38,7 +38,7 @@ def register(mcp):
         """
         client = DustClient()
         result = await client.get(
-            f"/spaces/{space_id}/data-sources/{data_source_id}/search",
+            f"/spaces/{space_id}/data_sources/{data_source_id}/search",
             params={
                 "query": query,
                 "top_k": top_k,

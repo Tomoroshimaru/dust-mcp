@@ -27,6 +27,7 @@ from tools.helper import register as register_help
 from tools.agents import register as register_agents
 from tools.conversations import register as register_conversations
 from tools.search import register as register_search
+from tools.spaces import register as register_spaces
 from tools.datasources import register as register_datasources
 from tools.documents import register as register_documents
 from tools.dsviews import register as register_dsviews
@@ -38,6 +39,7 @@ register_help(mcp)
 register_agents(mcp)
 register_conversations(mcp)
 register_search(mcp)
+register_spaces(mcp)
 register_datasources(mcp)
 register_documents(mcp)
 register_dsviews(mcp)
