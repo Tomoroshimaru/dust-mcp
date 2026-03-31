@@ -30,9 +30,7 @@ from tools.search import register as register_search
 from tools.spaces import register as register_spaces
 from tools.datasources import register as register_datasources
 from tools.documents import register as register_documents
-from tools.dsviews import register as register_dsviews
 from tools.tables import register as register_tables
-from tools.apps import register as register_apps
 from tools.files import register as register_files
 
 register_help(mcp)
@@ -42,9 +40,7 @@ register_search(mcp)
 register_spaces(mcp)
 register_datasources(mcp)
 register_documents(mcp)
-register_dsviews(mcp)
 register_tables(mcp)
-register_apps(mcp)
 register_files(mcp)
 
 logger.info("✅ All tools registered")

@@ -1,8 +1,12 @@
 """Conversations — Créer, lire, envoyer des messages, gérer les conversations"""
 import json
+import asyncio
+import logging
 from typing import Optional
 from client import DustClient
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 def _build_message_context(
@@ -18,6 +22,41 @@ def _build_message_context(
         "origin": "api",
         **({"fullName": full_name} if full_name else {}),
         **({"email": email} if email else {}),
+    }
+
+
+async def _poll_agent_response(
+    client: DustClient,
+    conversation_id: str,
+    max_attempts: int = 60,
+    interval: float = 3.0,
+) -> dict:
+    """
+    Poll la conversation jusqu'à ce que le dernier agent_message soit terminé.
+    Retourne la conversation complète.
+    """
+    conv_result = {}
+    for attempt in range(max_attempts):
+        await asyncio.sleep(interval)
+        conv_result = await client.get(f"/assistant/conversations/{conversation_id}")
+        if "conversation" in conv_result:
+            content = conv_result["conversation"].get("content", [])
+            if content:
+                last_group = content[-1]
+                for msg in last_group:
+                    if msg.get("type") == "agent_message":
+                        status = msg.get("status", "")
+                        if status in ("succeeded", "failed", "cancelled"):
+                            logger.info(
+                                f"Agent response received (status={status}) after {attempt + 1} polls"
+                            )
+                            return conv_result
+
+    logger.warning(f"Timeout after {max_attempts} polls waiting for agent response")
+    return {
+        "warning": "Timeout: l'agent n'a pas répondu dans le délai imparti. "
+                   "Utilisez dust_conv_get pour vérifier manuellement.",
+        **({"conversation": conv_result.get("conversation")} if conv_result else {}),
     }
 
 
@@ -44,7 +83,7 @@ def register(mcp):
             agent_sid: sId de l'agent à mentionner (optionnel). Trouvable via dust_agents_search.
             title: Titre de la conversation (optionnel)
             blocking: Si True, attend la réponse de l'agent. Si False, retourne immédiatement
-                      l'ID de conversation (utiliser dust_conv_get_events pour récupérer la réponse).
+                      l'ID de conversation.
             username: Username de l'expéditeur (optionnel, default: config)
             timezone: Timezone de l'expéditeur (optionnel, default: config)
         """
@@ -92,47 +131,41 @@ def register(mcp):
         """
         Envoyer un message dans une conversation existante.
 
-        ⚠️ Si un agent est mentionné et blocking=True, attend la réponse (consomme des crédits AI).
+        ⚠️ Si un agent est mentionné et blocking=True, attend la réponse
+        via polling (peut prendre 30-180s). Consomme des crédits AI.
 
         Args:
             conversation_id: sId de la conversation
             message_content: Contenu du message à envoyer
             agent_sid: sId de l'agent à mentionner (optionnel)
-            blocking: Si True, attend la réponse de l'agent
+            blocking: Si True et agent mentionné, attend la réponse de l'agent via polling.
+                      Si False, retourne immédiatement après envoi du message.
             username: Username de l'expéditeur (optionnel, default: config)
             timezone: Timezone de l'expéditeur (optionnel, default: config)
         """
         client = DustClient()
 
-        message = {
+        # L'API /messages attend les champs au top level (PAS de wrapper "message")
+        body = {
             "content": message_content,
             "mentions": [{"configurationId": agent_sid}] if agent_sid else [],
             "context": _build_message_context(username=username, timezone=timezone),
         }
 
-        body = {"message": message, "blocking": blocking}
-
         result = await client.post(
             f"/assistant/conversations/{conversation_id}/messages",
             data=body,
-            timeout=180.0 if blocking else 30.0,
         )
-        return json.dumps(result, indent=2, ensure_ascii=False)
 
-    @mcp.tool()
-    async def dust_conv_get_events(conversation_id: str) -> str:
-        """
-        Récupérer les events d'une conversation (réponses agent, actions, tokens).
-        Utile après un appel non-blocking pour récupérer la réponse.
+        # Vérifier si l'envoi a échoué
+        if isinstance(result, dict) and result.get("error"):
+            return json.dumps(result, indent=2, ensure_ascii=False)
 
-        Args:
-            conversation_id: sId de la conversation
-        """
-        client = DustClient()
-        result = await client.get(
-            f"/assistant/conversations/{conversation_id}/events",
-            timeout=180.0,
-        )
+        # Si blocking et agent mentionné → poll pour attendre la réponse
+        if blocking and agent_sid:
+            poll_result = await _poll_agent_response(client, conversation_id)
+            return json.dumps(poll_result, indent=2, ensure_ascii=False)
+
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     @mcp.tool()
@@ -207,5 +240,72 @@ def register(mcp):
         result = await client.post(
             f"/assistant/conversations/{conversation_id}/content_fragments",
             data=body,
+        )
+        return json.dumps(result, indent=2, ensure_ascii=False)
+
+    @mcp.tool()
+    async def dust_conv_get_feedbacks(conversation_id: str) -> str:
+        """
+        Récupérer tous les feedbacks (thumbs up/down) d'une conversation.
+
+        Args:
+            conversation_id: sId de la conversation
+        """
+        client = DustClient()
+        result = await client.get(
+            f"/assistant/conversations/{conversation_id}/feedbacks"
+        )
+        return json.dumps(result, indent=2, ensure_ascii=False)
+
+    @mcp.tool()
+    async def dust_conv_submit_feedback(
+        conversation_id: str,
+        message_id: str,
+        thumb_direction: str,
+        feedback_content: Optional[str] = None,
+        is_conversation_shared: bool = False,
+    ) -> str:
+        """
+        Soumettre un feedback (thumbs up/down) sur un message agent.
+
+        Args:
+            conversation_id: sId de la conversation
+            message_id: sId du message agent à évaluer
+            thumb_direction: "up" ou "down"
+            feedback_content: Commentaire optionnel sur le feedback
+            is_conversation_shared: Si la conversation est partagée (default False)
+        """
+        if thumb_direction not in ("up", "down"):
+            return json.dumps({"error": True, "message": "thumb_direction doit être 'up' ou 'down'"})
+
+        client = DustClient()
+        body = {
+            "thumbDirection": thumb_direction,
+            "isConversationShared": is_conversation_shared,
+        }
+        if feedback_content:
+            body["feedbackContent"] = feedback_content
+
+        result = await client.post(
+            f"/assistant/conversations/{conversation_id}/messages/{message_id}/feedbacks",
+            data=body,
+        )
+        return json.dumps(result, indent=2, ensure_ascii=False)
+
+    @mcp.tool()
+    async def dust_conv_delete_feedback(
+        conversation_id: str,
+        message_id: str,
+    ) -> str:
+        """
+        Supprimer un feedback sur un message.
+
+        Args:
+            conversation_id: sId de la conversation
+            message_id: sId du message dont supprimer le feedback
+        """
+        client = DustClient()
+        result = await client.delete(
+            f"/assistant/conversations/{conversation_id}/messages/{message_id}/feedbacks"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

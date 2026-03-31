@@ -44,8 +44,10 @@ def register(mcp):
         space_id: str,
         data_source_id: str,
         table_id: str,
-        name: str,
+        title: str,
         description: str,
+        timestamp: Optional[int] = None,
+        tags: Optional[str] = None,
     ) -> str:
         """
         Créer ou mettre à jour une table.
@@ -55,17 +57,26 @@ def register(mcp):
             space_id: ID du space
             data_source_id: ID de la data source
             table_id: ID de la table (sera créée si n'existe pas)
-            name: Nom de la table
+            title: Titre de la table (ex: "ROI Data Q1")
             description: Description de la table
+            timestamp: Timestamp Unix ms (optionnel, ex: 1736365559000)
+            tags: Tags séparés par des virgules (optionnel)
         """
         client = DustClient()
+        data = {
+            "table_id": table_id,
+            "name": title,
+            "title": title,
+            "description": description,
+        }
+        if timestamp:
+            data["timestamp"] = timestamp
+        if tags:
+            data["tags"] = [t.strip() for t in tags.split(",")]
+
         result = await client.post(
             f"/spaces/{space_id}/data_sources/{data_source_id}/tables",
-            data={
-                "table_id": table_id,
-                "name": name,
-                "description": description,
-            },
+            data=data,
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -139,7 +150,6 @@ def register(mcp):
         except json.JSONDecodeError as e:
             return json.dumps({"error": True, "message": f"JSON invalide: {str(e)}"})
 
-        # Validation des rows
         for i, row in enumerate(rows):
             if "row_id" not in row or "value" not in row:
                 return json.dumps({
