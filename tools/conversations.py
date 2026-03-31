@@ -169,42 +169,6 @@ def register(mcp):
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     @mcp.tool()
-    async def dust_conv_edit_message(
-        conversation_id: str,
-        message_id: str,
-        new_content: str,
-    ) -> str:
-        """
-        Éditer un message déjà envoyé dans une conversation.
-
-        Args:
-            conversation_id: sId de la conversation
-            message_id: sId du message à éditer
-            new_content: Nouveau contenu du message
-        """
-        client = DustClient()
-        result = await client.post(
-            f"/assistant/conversations/{conversation_id}/messages/{message_id}/edit",
-            data={"content": new_content},
-        )
-        return json.dumps(result, indent=2, ensure_ascii=False)
-
-    @mcp.tool()
-    async def dust_conv_cancel(conversation_id: str) -> str:
-        """
-        Annuler la génération en cours d'un agent dans une conversation.
-        Utile si l'agent prend trop de temps ou part dans une mauvaise direction.
-
-        Args:
-            conversation_id: sId de la conversation
-        """
-        client = DustClient()
-        result = await client.post(
-            f"/assistant/conversations/{conversation_id}/cancel"
-        )
-        return json.dumps(result, indent=2, ensure_ascii=False)
-
-    @mcp.tool()
     async def dust_conv_add_content(
         conversation_id: str,
         title: str,
@@ -240,72 +204,5 @@ def register(mcp):
         result = await client.post(
             f"/assistant/conversations/{conversation_id}/content_fragments",
             data=body,
-        )
-        return json.dumps(result, indent=2, ensure_ascii=False)
-
-    @mcp.tool()
-    async def dust_conv_get_feedbacks(conversation_id: str) -> str:
-        """
-        Récupérer tous les feedbacks (thumbs up/down) d'une conversation.
-
-        Args:
-            conversation_id: sId de la conversation
-        """
-        client = DustClient()
-        result = await client.get(
-            f"/assistant/conversations/{conversation_id}/feedbacks"
-        )
-        return json.dumps(result, indent=2, ensure_ascii=False)
-
-    @mcp.tool()
-    async def dust_conv_submit_feedback(
-        conversation_id: str,
-        message_id: str,
-        thumb_direction: str,
-        feedback_content: Optional[str] = None,
-        is_conversation_shared: bool = False,
-    ) -> str:
-        """
-        Soumettre un feedback (thumbs up/down) sur un message agent.
-
-        Args:
-            conversation_id: sId de la conversation
-            message_id: sId du message agent à évaluer
-            thumb_direction: "up" ou "down"
-            feedback_content: Commentaire optionnel sur le feedback
-            is_conversation_shared: Si la conversation est partagée (default False)
-        """
-        if thumb_direction not in ("up", "down"):
-            return json.dumps({"error": True, "message": "thumb_direction doit être 'up' ou 'down'"})
-
-        client = DustClient()
-        body = {
-            "thumbDirection": thumb_direction,
-            "isConversationShared": is_conversation_shared,
-        }
-        if feedback_content:
-            body["feedbackContent"] = feedback_content
-
-        result = await client.post(
-            f"/assistant/conversations/{conversation_id}/messages/{message_id}/feedbacks",
-            data=body,
-        )
-        return json.dumps(result, indent=2, ensure_ascii=False)
-
-    @mcp.tool()
-    async def dust_conv_delete_feedback(
-        conversation_id: str,
-        message_id: str,
-    ) -> str:
-        """
-        Supprimer un feedback sur un message.
-
-        Args:
-            conversation_id: sId de la conversation
-            message_id: sId du message dont supprimer le feedback
-        """
-        client = DustClient()
-        result = await client.delete(
-            f"/assistant/conversations/{conversation_id}/messages/{message_id}/feedbacks"
         )
         return json.dumps(result, indent=2, ensure_ascii=False)

@@ -23,7 +23,6 @@ Config.validate()
 mcp = FastMCP("Dust MCP")
 
 # === Register all tools ===
-from tools.helper import register as register_help
 from tools.agents import register as register_agents
 from tools.conversations import register as register_conversations
 from tools.search import register as register_search
@@ -33,7 +32,6 @@ from tools.documents import register as register_documents
 from tools.tables import register as register_tables
 from tools.files import register as register_files
 
-register_help(mcp)
 register_agents(mcp)
 register_conversations(mcp)
 register_search(mcp)
