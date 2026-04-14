@@ -31,6 +31,7 @@ from tools.datasources import register as register_datasources
 from tools.documents import register as register_documents
 from tools.tables import register as register_tables
 from tools.files import register as register_files
+from tools.usage import register as register_usage
 
 register_agents(mcp)
 register_conversations(mcp)
@@ -40,6 +41,7 @@ register_datasources(mcp)
 register_documents(mcp)
 register_tables(mcp)
 register_files(mcp)
+register_usage(mcp)
 
 logger.info("✅ All tools registered")
 

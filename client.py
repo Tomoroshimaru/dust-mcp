@@ -1,6 +1,6 @@
 """Dust API Client — async httpx"""
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 import httpx
 
 from config import Config
@@ -80,3 +80,54 @@ class DustClient:
 
     async def delete(self, endpoint: str, **kwargs) -> Dict:
         return await self._request("DELETE", endpoint, **kwargs)
+
+    # === Réponses non-JSON (YAML, CSV, texte brut) ===
+    async def get_raw(
+        self,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        accept: str = "text/plain",
+        timeout: float = 120.0,
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        GET qui retourne le body brut (texte) au lieu de parser du JSON.
+        Utilisé pour les endpoints qui retournent du YAML, CSV, etc.
+
+        Retourne :
+        - str : le contenu texte brut si succès (2xx)
+        - dict : {"error": True, ...} si erreur
+        """
+        url = f"{self.base_url}{endpoint}"
+        headers = {**self._headers(), "Accept": accept}
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            try:
+                response = await client.get(url, headers=headers, params=params)
+
+                if response.status_code == 200:
+                    return response.text
+
+                # Réutilise la même logique d'erreur que _request
+                if response.status_code == 401:
+                    return {"error": True, "status_code": 401, "message": "API Key invalide ou expirée."}
+                if response.status_code == 403:
+                    return {"error": True, "status_code": 403, "message": "Accès interdit. Vérifiez les permissions."}
+                if response.status_code == 404:
+                    return {"error": True, "status_code": 404, "message": f"Ressource non trouvée: {endpoint}"}
+                if response.status_code == 429:
+                    return {"error": True, "status_code": 429, "message": "Rate limit atteint."}
+
+                # Tenter de parser le body d'erreur en JSON
+                try:
+                    error_body = response.json()
+                    msg = error_body.get("error", {}).get("message", response.text[:500])
+                except Exception:
+                    msg = response.text[:500]
+
+                return {"error": True, "status_code": response.status_code, "message": msg}
+
+            except httpx.TimeoutException:
+                return {"error": True, "status_code": 408, "message": f"Timeout sur GET {endpoint}"}
+            except Exception as e:
+                logger.exception(f"get_raw failed: {e}")
+                return {"error": True, "status_code": 500, "message": f"Erreur inattendue: {str(e)}"}
